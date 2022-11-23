@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:data_grid/src/components.dart';
 import 'package:data_grid/src/data_grid_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:sliver_tools/sliver_tools.dart';
 import 'package:sync_scroll_controller/sync_scroll_controller.dart';
 
 export 'package:data_grid/src/data_grid_theme.dart';
@@ -13,51 +14,26 @@ export 'package:data_grid/src/data_grid_theme.dart';
 class Grid extends StatefulWidget {
   /// Create a [Grid]
   Grid({
-    Key? key,
-
-    /// The columns headings of the grid
+    super.key,
     required this.columns,
-
-    /// The rows of the grid
     required this.rows,
-
-    /// The height of the columns header.
     this.columnsHeaderHeight = 40,
-
-    /// The initial column to show
-    /// Set this to 1 to have the column at index 0 hidden by scroll
     this.initialColumnIndex = 0,
-
-    /// The column index to sort initially
     this.defaultSortedColumnIndex = 0,
-
-    /// Scroll Physics for the [Grid]
     this.physics,
-
-    /// Horizontal separator for the grid header
-    /// e.g (context, index) => const Divider()
     Widget Function(BuildContext)? horizontalHeaderSeparatorBuilder,
-
-    /// Horizontal separator for the grid body
-    /// e.g (context, index) => const Divider()
     Widget Function(BuildContext, int)? horizontalSeparatorBuilder,
-
-    /// Settings for sorting icons
     this.dataGridThemeData = const DataGridThemeData(),
-
-    /// Whether each row has a header (which contents can scroll behind)
     this.hasRowHeader = true,
-
-    /// The current selected row index
     this.selectedRowIndex,
-  })  : assert(
+    this.rowHeight = 40,
+  }) : assert(
           rows.every((element) => element.children.length == columns.length),
-        ),
-        super(key: key) {
-    this.horizontalSeparatorBuilder =
-        horizontalSeparatorBuilder ?? (context, index) => Container();
-    this.horizontalHeaderSeparatorBuilder =
-        horizontalHeaderSeparatorBuilder ?? (context) => Container();
+        ) {
+    this.horizontalSeparatorBuilder = horizontalSeparatorBuilder ??
+        (context, index) => const SizedBox.shrink();
+    this.horizontalHeaderSeparatorBuilder = horizontalHeaderSeparatorBuilder ??
+        (context) => const SizedBox.shrink();
   }
 
   /// Horizontal separator for the grid body
@@ -65,7 +41,8 @@ class Grid extends StatefulWidget {
 
   /// Horizontal separator for the grid header
   late final Widget Function(BuildContext) horizontalHeaderSeparatorBuilder;
-  // The height of the columns header
+
+  /// The height of the columns header
   final double columnsHeaderHeight;
 
   /// The columns headings of the grid
@@ -75,6 +52,8 @@ class Grid extends StatefulWidget {
   final List<GridRow> rows;
 
   /// The initial column to show
+  ///
+  /// Set this to 1 to have the column at index 0 hidden by scroll
   final int initialColumnIndex;
 
   /// The column index to sort initially
@@ -91,6 +70,11 @@ class Grid extends StatefulWidget {
 
   /// The current selected row index
   final int? selectedRowIndex;
+
+  /// Default height for rows
+  ///
+  /// Can be overridden by [GridRow.height]
+  final double rowHeight;
 
   @override
   State<Grid> createState() => _GridState();
@@ -113,6 +97,7 @@ class _GridState extends State<Grid> {
   @override
   void initState() {
     super.initState();
+    Container();
     horizontalControllers = SyncScrollControllerGroup(
       initialScrollOffset: calculateColumnOffset(
         widget.initialColumnIndex,
@@ -289,65 +274,72 @@ class _GridState extends State<Grid> {
     sizeColumns(widget.columns, widget.rows);
     resortBySortedColumn();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return MultiSliver(
       children: [
-        GridColumnHeader(
-          physics: widget.physics,
-          columnsHeaderHeight: widget.columnsHeaderHeight,
-          sortByColumn: sortByColumn,
-          columns: widget.columns,
-          indices: indices,
-          scrollController: columnHeaderController,
-          sortingIconSettings: widget.dataGridThemeData.sortingIconSettings,
-          hasRowHeader: widget.hasRowHeader,
+        SliverPinnedHeader(
+          child: GridColumnHeader(
+            physics: widget.physics,
+            columnsHeaderHeight: widget.columnsHeaderHeight,
+            sortByColumn: sortByColumn,
+            columns: widget.columns,
+            indices: indices,
+            scrollController: columnHeaderController,
+            sortingIconSettings: widget.dataGridThemeData.sortingIconSettings,
+            hasRowHeader: widget.hasRowHeader,
+          ),
         ),
-        SizedBox(
-          width: calculateColumnWidths(indices)
-              .reduce((value, element) => value + element),
-          child: widget.horizontalHeaderSeparatorBuilder(context),
-        ),
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (widget.hasRowHeader)
-                GridRowHeader(
+        // SizedBox(
+        //   width: calculateColumnWidths(indices)
+        //       .reduce((value, element) => value + element),
+        //   child: widget.horizontalHeaderSeparatorBuilder(context),
+        // ),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: widget.columnsHeaderHeight +
+                (widget.rows.length * widget.rowHeight),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.hasRowHeader)
+                  GridRowHeader(
+                    physics: widget.physics,
+                    rows: widget.rows,
+                    width: widget.columns.first.width,
+                    scrollController: rowHeaderController,
+                    separatorBuilder: widget.horizontalSeparatorBuilder,
+                    hoveringRowIndex: _hoveringRowIndex,
+                    onHoverIndex: (index) => setState(
+                      () => _hoveringRowIndexHeader = index,
+                    ),
+                    highlightDecoration:
+                        widget.dataGridThemeData.rowHighlightDecoration,
+                    selectedRowIndex: widget.selectedRowIndex,
+                    selectedDecoration:
+                        widget.dataGridThemeData.rowSelectedDecoration,
+                    rowHeight: widget.rowHeight,
+                  ),
+                GridRows(
+                  indices: indices,
                   physics: widget.physics,
                   rows: widget.rows,
-                  width: widget.columns.first.width,
-                  scrollController: rowHeaderController,
-                  separatorBuilder: widget.horizontalSeparatorBuilder,
+                  columnWidths: calculateColumnWidths(indices),
+                  horizontalSeparatorBuilder: widget.horizontalSeparatorBuilder,
+                  rowsControllerY: rowsControllerY,
+                  rowsControllerX: rowsControllerX,
+                  showHeader: !widget.hasRowHeader,
                   hoveringRowIndex: _hoveringRowIndex,
                   onHoverIndex: (index) => setState(
-                    () => _hoveringRowIndexHeader = index,
+                    () => _hoveringRowIndexRows = index,
                   ),
                   highlightDecoration:
                       widget.dataGridThemeData.rowHighlightDecoration,
                   selectedRowIndex: widget.selectedRowIndex,
                   selectedDecoration:
                       widget.dataGridThemeData.rowSelectedDecoration,
+                  rowHeight: widget.rowHeight,
                 ),
-              GridRows(
-                indices: indices,
-                physics: widget.physics,
-                rows: widget.rows,
-                columnWidths: calculateColumnWidths(indices),
-                horizontalSeparatorBuilder: widget.horizontalSeparatorBuilder,
-                rowsControllerY: rowsControllerY,
-                rowsControllerX: rowsControllerX,
-                showHeader: !widget.hasRowHeader,
-                hoveringRowIndex: _hoveringRowIndex,
-                onHoverIndex: (index) => setState(
-                  () => _hoveringRowIndexRows = index,
-                ),
-                highlightDecoration:
-                    widget.dataGridThemeData.rowHighlightDecoration,
-                selectedRowIndex: widget.selectedRowIndex,
-                selectedDecoration:
-                    widget.dataGridThemeData.rowSelectedDecoration,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -625,17 +617,16 @@ class GridColumn {
 class GridRow {
   const GridRow({
     required this.children,
-    this.height = 40,
-
-    /// [onTap] is called when the user tap anywhere on the grid row
     this.onTap,
-
-    /// [onLongPress] is called when the user holds down anywhere on the grid row
     this.onLongPress,
   });
+
   final List<GridCell> children;
-  final double height;
+
+  /// [onTap] is called when the user tap anywhere on the grid row
   final VoidCallback? onTap;
+
+  /// [onLongPress] is called when the user holds down anywhere on the grid row
   final VoidCallback? onLongPress;
 }
 

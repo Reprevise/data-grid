@@ -15,6 +15,7 @@ class GridRowHeader extends StatelessWidget {
     this.highlightDecoration,
     this.selectedRowIndex,
     this.selectedDecoration,
+    required this.rowHeight,
   }) : super(key: key);
 
   final double width;
@@ -27,6 +28,7 @@ class GridRowHeader extends StatelessWidget {
   final BoxDecoration? highlightDecoration;
   final int? selectedRowIndex;
   final BoxDecoration? selectedDecoration;
+  final double rowHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +46,7 @@ class GridRowHeader extends StatelessWidget {
           highlightDecoration: highlightDecoration,
           isSelected: selectedRowIndex == index,
           selectedDecoration: selectedDecoration,
+          rowHeight: rowHeight,
         ),
       ),
     );
@@ -59,6 +62,7 @@ class _GridRowHeaderItem extends StatefulWidget {
     this.highlightDecoration,
     this.isSelected = false,
     this.selectedDecoration,
+    required this.rowHeight,
   }) : super(key: key);
 
   final GridRow item;
@@ -67,6 +71,7 @@ class _GridRowHeaderItem extends StatefulWidget {
   final BoxDecoration? highlightDecoration;
   final bool isSelected;
   final BoxDecoration? selectedDecoration;
+  final double rowHeight;
 
   @override
   State<_GridRowHeaderItem> createState() => _GridRowHeaderItemState();
@@ -112,7 +117,7 @@ class _GridRowHeaderItemState extends State<_GridRowHeaderItem> {
         },
         child: Container(
           decoration: _getDecoration(),
-          height: widget.item.height,
+          height: widget.rowHeight,
           child: widget.item.children.first.child,
         ),
       ),
@@ -249,6 +254,7 @@ class GridRows extends StatelessWidget {
     this.highlightDecoration,
     this.selectedRowIndex,
     this.selectedDecoration,
+    required this.rowHeight,
   }) : super(key: key);
 
   final List<GridRow> rows;
@@ -263,6 +269,7 @@ class GridRows extends StatelessWidget {
   final BoxDecoration? highlightDecoration;
   final int? selectedRowIndex;
   final BoxDecoration? selectedDecoration;
+  final double rowHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -293,6 +300,7 @@ class GridRows extends StatelessWidget {
               highlightDecoration: highlightDecoration,
               isSelected: selectedRowIndex == rowIndex,
               selectedDecoration: selectedDecoration,
+              rowHeight: rowHeight,
             ),
           ),
         ),
@@ -312,8 +320,8 @@ class _GridRowItem extends StatefulWidget {
     this.highlightDecoration,
     this.isSelected = false,
     this.selectedDecoration,
-    Key? key,
-  }) : super(key: key);
+    required this.rowHeight,
+  });
 
   final GridRow item;
   final List<double> columnWidths;
@@ -324,6 +332,7 @@ class _GridRowItem extends StatefulWidget {
   final BoxDecoration? highlightDecoration;
   final bool isSelected;
   final BoxDecoration? selectedDecoration;
+  final double rowHeight;
 
   @override
   State<_GridRowItem> createState() => _GridRowItemState();
@@ -379,7 +388,7 @@ class _GridRowItemState extends State<_GridRowItem> {
                     widget.item.onTap?.call();
                   },
                   child: SizedBox(
-                    height: widget.item.height,
+                    height: widget.rowHeight,
                     width: widget.columnWidths[i],
                     child: widget.item.children[widget.indices[i]].child,
                   ),
